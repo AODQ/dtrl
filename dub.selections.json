@@ -1,0 +1,9 @@
+{
+	"fileVersion": 1,
+	"versions": {
+		"bindbc-glfw": "0.2.1",
+		"bindbc-loader": "0.1.1",
+		"dtoavk-bindings": "~master",
+		"neobc": "~master"
+	}
+}
