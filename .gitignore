@@ -1,3 +1,6 @@
 .dub/
 imgui.ini
 dtrl
+*.bin
+*.gltf
+*.spv
