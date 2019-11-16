@@ -375,6 +375,15 @@ void main(string[] args) {
     , commandBuffers.ptr
     );
   }
+  scope(exit) {
+    printf("freeing command buffers\n");
+    vkFreeCommandBuffers(
+      frameworkContext.device
+    , commandPool
+    , cast(uint)commandBuffers.length
+    , commandBuffers.ptr
+    );
+  }
 
 
   // renderpass start ----------------------------------------------------------
@@ -432,44 +441,101 @@ void main(string[] args) {
 
   imguiRenderpass = CreateImGuiRenderPass(frameworkContext);
   imguiCommandPool = InitializeImGuiCommandPool(frameworkContext);
-  imguiCommandBuffers.Resize(frameworkContext.backbufferViews.size());
+  imguiCommandBuffers.Resize(frameworkContext.backbufferViews.length());
   InitializeImGuiCommandBuffers(
     frameworkContext
   , imguiCommandPool
   , imguiCommandBuffers
   );
 
+  scope(exit) {
+    printf("freeing imgui command buffers\n");
+    vkFreeCommandBuffers(
+      frameworkContext.device
+    , imguiCommandPool
+    , cast(uint)imguiCommandBuffers.length
+    , imguiCommandBuffers.ptr
+    );
+    printf("freeing imgui command pool\n");
+    vkDestroyCommandPool(
+      frameworkContext.device
+    , imguiCommandPool
+    , null
+    );
 
-  imguiFramebuffers.Resize(frameworkContext.backbuffers.size());
-  {
-    VkImageView attachment;
+    vkDestroyRenderPass(frameworkContext.device, imguiRenderpass, null);
+  }
+
+
+  imguiFramebuffers.Resize(frameworkContext.backbufferViews.length());
+  foreach (i; 0 .. frameworkContext.backbufferViews.length()) {
+    auto attachments = neobc.Array!VkImageView(1);
+    attachments[0] = frameworkContext.backbufferViews[i];
 
     VkFramebufferCreateInfo info = {
       sType: VkStructureType.framebufferCreateInfo
+    , flags: 0
     , renderPass: imguiRenderpass
-    , attachmentCount: 1
-    , pAttachments: &attachment
+    , attachmentCount: cast(uint)attachments.length
+    , pAttachments: attachments.ptr
     , width: 800
     , height: 600
     , layers: 1
     };
 
-    foreach (i; 0 .. frameworkContext.backbuffers.size()) {
-      attachment = frameworkContext.backbufferViews[i];
-      vkCreateFramebuffer(
-        frameworkContext.device
-      , &info
-      , null
-      , imguiFramebuffers.ptr + i
-      ).EnforceVk;
-    }
+    vkCreateFramebuffer(
+      frameworkContext.device
+    , &info
+    , null
+    , imguiFramebuffers.ptr + i
+    ).EnforceVk;
+  }
+
+  scope (exit) {
+    foreach (ref fb; imguiFramebuffers.AsRange)
+      vkDestroyFramebuffer(frameworkContext.device, fb, null);
+  }
+
+  VkDescriptorPool descriptorPool;
+  { // -- create descriptor pool
+    auto poolSizes = neobc.Array!VkDescriptorPoolSize(
+      VkDescriptorPoolSize(VkDescriptorType.sampler, 1000)
+    , VkDescriptorPoolSize(VkDescriptorType.combinedImageSampler, 1000)
+    , VkDescriptorPoolSize(VkDescriptorType.sampledImage, 1000)
+    , VkDescriptorPoolSize(VkDescriptorType.storageImage, 1000)
+    , VkDescriptorPoolSize(VkDescriptorType.uniformTexelBuffer, 1000)
+    , VkDescriptorPoolSize(VkDescriptorType.storageTexelBuffer, 1000)
+    , VkDescriptorPoolSize(VkDescriptorType.uniformBufferDynamic, 1000)
+    , VkDescriptorPoolSize(VkDescriptorType.storageBufferDynamic, 1000)
+    , VkDescriptorPoolSize(VkDescriptorType.inputAttachment, 1000)
+    );
+
+    VkDescriptorPoolCreateInfo poolInfo = {
+      sType: VkStructureType.descriptorPoolCreateInfo
+    , flags: VkDescriptorPoolCreateFlag.freeDescriptorSetBit
+    , maxSets: cast(uint)(1000 * poolSizes.length)
+    , poolSizeCount: cast(uint)poolSizes.length
+    , pPoolSizes: poolSizes.ptr
+    };
+
+    vkCreateDescriptorPool(
+      frameworkContext.device
+    , &poolInfo
+    , null
+    , &descriptorPool
+    ).EnforceVk;
+  }
+
+  scope (exit) {
+    vkDestroyDescriptorPool(frameworkContext.device, descriptorPool, null);
   }
 
   InitializeGlfwVulkanImgui(
     frameworkContext
   , imguiRenderpass
-  , commandPool
-  , commandBuffers[0]
+  , imguiCommandPool
+  , imguiCommandBuffers[0]
+  , descriptorPool
   );
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -538,6 +604,14 @@ void main(string[] args) {
     , &info
     , null
     , &semaphoreMainRenderFinished
+    );
+  }
+
+  scope(exit) {
+    vkDestroySemaphore(
+      frameworkContext.device
+    , semaphoreMainRenderFinished
+    , null
     );
   }
 
@@ -656,13 +730,18 @@ void main(string[] args) {
     };
     vkQueuePresentKHR(frameworkContext.graphicsQueue, &presentInfo);
 
-
     vkQueueWaitIdle(frameworkContext.graphicsQueue);
-
   }
 
   vkDeviceWaitIdle(frameworkContext.device);
 
+
+  printf("Shutting imgui vulkan down\n");
+  ImGui_ImplVulkan_Shutdown();
+  printf("Shutting imgui glfw down\n");
+  ImGui_ImplGlfw_Shutdown();
+  printf("destroying imgui context\n");
+  igDestroyContext(igGetCurrentContext());
   // vkFreeMemory(frameworkContext.device, resolvedImageMemory, null);
 
   printf("-- Closing --\n");

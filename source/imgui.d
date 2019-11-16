@@ -118,40 +118,11 @@ void InitializeGlfwVulkanImgui(
 , ref VkRenderPass imguiRenderpass
 , ref VkCommandPool commandPool
 , ref VkCommandBuffer commandBuffer
+, ref VkDescriptorPool descriptorPool
 ) {
   cInfo.context = igCreateContext(null);
 
   // -- most code here adapted from imgui's example_glfw_vulkan
-
-  VkDescriptorPool descriptorPool;
-  { // -- create descriptor pool
-    auto poolSizes = Array!VkDescriptorPoolSize(
-      VkDescriptorPoolSize(VkDescriptorType.sampler, 1000)
-    , VkDescriptorPoolSize(VkDescriptorType.combinedImageSampler, 1000)
-    , VkDescriptorPoolSize(VkDescriptorType.sampledImage, 1000)
-    , VkDescriptorPoolSize(VkDescriptorType.storageImage, 1000)
-    , VkDescriptorPoolSize(VkDescriptorType.uniformTexelBuffer, 1000)
-    , VkDescriptorPoolSize(VkDescriptorType.storageTexelBuffer, 1000)
-    , VkDescriptorPoolSize(VkDescriptorType.uniformBufferDynamic, 1000)
-    , VkDescriptorPoolSize(VkDescriptorType.storageBufferDynamic, 1000)
-    , VkDescriptorPoolSize(VkDescriptorType.inputAttachment, 1000)
-    );
-
-    VkDescriptorPoolCreateInfo poolInfo = {
-      sType: VkStructureType.descriptorPoolCreateInfo
-    , flags: VkDescriptorPoolCreateFlag.freeDescriptorSetBit
-    , maxSets: cast(uint)(1000 * poolSizes.length)
-    , poolSizeCount: cast(uint)poolSizes.length
-    , pPoolSizes: poolSizes.ptr
-    };
-
-    vkCreateDescriptorPool(
-      fw.device
-    , &poolInfo
-    , null
-    , &descriptorPool
-    ).EnforceVk;
-  }
 
   // -- initialize imgui
   ImGui_ImplGlfw_InitForVulkan(fw.window, true);
