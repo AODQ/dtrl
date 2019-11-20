@@ -8,6 +8,7 @@ static import neobc;
 static import signalhandler;
 static import dtl;
 import dtl.vkutil;
+import dtl.imgui_widgets;
 
 ////////////////////////////////////////////////////////////////////////////////
 struct RenderPass
@@ -376,7 +377,6 @@ void main(string[] args) {
     );
   }
   scope(exit) {
-    printf("freeing command buffers\n");
     vkFreeCommandBuffers(
       frameworkContext.device
     , commandPool
@@ -449,14 +449,12 @@ void main(string[] args) {
   );
 
   scope(exit) {
-    printf("freeing imgui command buffers\n");
     vkFreeCommandBuffers(
       frameworkContext.device
     , imguiCommandPool
     , cast(uint)imguiCommandBuffers.length
     , imguiCommandBuffers.ptr
     );
-    printf("freeing imgui command pool\n");
     vkDestroyCommandPool(
       frameworkContext.device
     , imguiCommandPool
@@ -615,10 +613,16 @@ void main(string[] args) {
     );
   }
 
-  float lastFrameTime = glfwGetTime(), currentFrameTime = glfwGetTime();
+  double lastFrameTime = glfwGetTime(), currentFrameTime = glfwGetTime();
   while (!frameworkContext.ShouldWindowClose()) {
+
+    lastFrameTime = currentFrameTime;
+    currentFrameTime = glfwGetTime();
+    float deltaTime = 1000.0f * (currentFrameTime - lastFrameTime);
+
     frameworkContext.PollEvents;
     auto imageIndex = frameworkContext.SwapFrame;
+
 
     auto waitStages = neobc.Array!VkPipelineStageFlags(1);
     waitStages[0] = VkPipelineStageFlag.colorAttachmentOutputBit;
@@ -641,19 +645,25 @@ void main(string[] args) {
     ).EnforceVk;
 
     { // -- imgui
-      ImGui_ImplVulkan_NewFrame;
       ImGui_ImplGlfw_NewFrame;
+      ImGui_ImplVulkan_NewFrame;
 
       igNewFrame;
 
-      bool open = true;
-      igShowDemoWindow(&open);
+      static bool open = true;
+      // igShowDemoWindow(&open);
+      igShowMetricsWindow(&open);
 
-      //   igText(
-      //     "Framerate: %.3f ms/frame (%d FPS)",
-      //     (currentFrameTime - lastFrameTime)*1000.0f,
-      //     cast(int)(1.0f/(currentFrameTime - lastFrameTime))
-      //   );
+      igBegin("FramerateGraph", null, 0);
+      igWidgetShowFramerateGraph(deltaTime);
+      igEnd();
+      // igShowAboutWindow(null);
+      float[3] Z;
+      igColorEdit3(
+        "asdf"
+      , Z
+      , cast(int)ImGuiColorEditFlags_.ImGuiColorEditFlags_HDR
+      );
 
       igRender;
 
@@ -730,17 +740,16 @@ void main(string[] args) {
     };
     vkQueuePresentKHR(frameworkContext.graphicsQueue, &presentInfo);
 
+    neobc.Sleep(5);
+
     vkQueueWaitIdle(frameworkContext.graphicsQueue);
   }
 
   vkDeviceWaitIdle(frameworkContext.device);
 
 
-  printf("Shutting imgui vulkan down\n");
   ImGui_ImplVulkan_Shutdown();
-  printf("Shutting imgui glfw down\n");
   ImGui_ImplGlfw_Shutdown();
-  printf("destroying imgui context\n");
   igDestroyContext(igGetCurrentContext());
   // vkFreeMemory(frameworkContext.device, resolvedImageMemory, null);
 

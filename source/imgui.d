@@ -5,7 +5,7 @@ import core.stdc.stdint;
 public import
   dtoavkbindings.cimgui,
   dtoavkbindings.cimgui_glfw,
-  dtoavkbindings.cimgui_vk;
+  dtoavkbindings.imgui_impl_vulkan;
 
 import dtl.vkcontext;
 import dtl.vkutil;
@@ -22,10 +22,7 @@ struct CimguiInfo {
 CimguiInfo cInfo;
 
 nothrow static void ImguiCheckVkResult(VkResult err) {
-  import core.stdc.stdio;
-
-  if (err == 0)
-    { return; }
+  err.EnforceVk;
 }
 
 VkCommandPool InitializeImGuiCommandPool(ref FrameworkContext fw)
@@ -134,8 +131,8 @@ void InitializeGlfwVulkanImgui(
   , Queue: fw.graphicsQueue
   , PipelineCache: fw.pipelineCache
   , DescriptorPool: descriptorPool
-  , MinImageCount: 2
-  , ImageCount: 2
+  , MinImageCount: cast(uint)fw.backbufferViews.length
+  , ImageCount: cast(uint)fw.backbufferViews.length
   , MSAASamples: VkSampleCountFlag.i1Bit
   , Allocator: null
   , CheckVkResultFn: &ImguiCheckVkResult
