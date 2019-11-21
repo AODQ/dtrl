@@ -4,6 +4,25 @@ authors "aodq"
 copyright "nil"
 license "MIT or UNLICENSE"
 
+targetType "executable"
+targetName "dtrl"
+targetPath "install"
+
+// -- build shaders
+
+// on build we want to copy over all data files (ei, shader binaries)
+// but after every run we only want to copy over the shaders themselves
+preBuildCommands "rm -rf install"
+copyFiles "data"
+preRunCommands "glslangValidator -V data/triangle.frag -o data/triangle.frag.spv"
+preRunCommands "glslangValidator -V data/triangle.vert -o data/triangle.vert.spv"
+preRunCommands "rm install/data/*.spv"
+preRunCommands "cp -r data/*.spv install/data/."
+preRunCommands "rm install/data/*.frag"
+preRunCommands "rm install/data/*.vert"
+preRunCommands "echo hi"
+preRunCommands "echo hi"
+
 dependency "bindbc-glfw" version="~>0.2.0"
 dependency "dtoavk-bindings" version=">=0.0.0"
 dependency "neobc" version=">=0.0.0"
