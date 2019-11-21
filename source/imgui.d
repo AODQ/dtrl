@@ -163,7 +163,6 @@ void InitializeGlfwVulkanImgui(
 
     vkDeviceWaitIdle(fw.device).EnforceVk;
 
-    // TODO FIX ME
-    // ImGui_ImplVulkan_DestroyFontUploadObjects();
+    ImGui_ImplVulkan_DestroyFontUploadObjects();
   }
 }
