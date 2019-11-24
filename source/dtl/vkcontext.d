@@ -451,6 +451,34 @@ void InitializeSemaphores(ref FrameworkContext self) {
   vkCreateSemaphore(self.device, &info, null, &self.semaphoreRendersFinished);
 }
 
+
+void InitializeTransientCommandPool(ref FrameworkContext self) {
+
+  { // -- create command pool
+    VkCommandPoolCreateInfo info = {
+      sType: VkStructureType.commandPoolCreateInfo
+    , flags:
+        VkCommandPoolCreateFlag.transientBit
+      | VkCommandPoolCreateFlag.resetCommandBufferBit
+    , queueFamilyIndex: self.graphicsQueueFamilyIndex
+    };
+
+    vkCreateCommandPool(self.device , &info, null, &self.transientCommandPool)
+      .EnforceVk;
+  }
+
+  { // -- create command buffers
+    VkCommandBufferAllocateInfo info = {
+      sType: VkStructureType.commandBufferAllocateInfo
+    , commandPool: self.transientCommandPool
+    , level: VkCommandBufferLevel.primary
+    , commandBufferCount: 1
+    };
+
+    vkAllocateCommandBuffers(self.device, &info, &self.transientCommandBuffer);
+  }
+}
+
 struct FrameworkContext {
   GLFWwindow* window;
   VkInstance instance;
@@ -468,6 +496,9 @@ struct FrameworkContext {
   VkQueue graphicsQueue;
   VkQueue transferQueue;
   VkQueue presentQueue;
+
+  VkCommandPool transientCommandPool;
+  VkCommandBuffer transientCommandBuffer;
 
   VkSwapchainKHR     swapchain;
   VkSurfaceFormatKHR surfaceFormat;
@@ -496,6 +527,7 @@ struct FrameworkContext {
     self.InitializeSwapchain;
     self.InitializeSwapchainImageViews;
     self.InitializeSemaphores;
+    self.InitializeTransientCommandPool;
 
     return self;
   }
@@ -517,6 +549,12 @@ struct FrameworkContext {
       imageView = null;
     }
 
+    vkDestroyCommandPool(this.device, this.transientCommandPool, null);
+    vkFreeCommandBuffers(
+      this.device
+    , this.transientCommandPool
+    , 1, &this.transientCommandBuffer
+    );
     vkDestroySemaphore(this.device, this.semaphoreImageAcquired, null);
     vkDestroySemaphore(this.device, this.semaphoreRendersFinished, null);
     vkDestroySwapchainKHR(this.device, this.swapchain, null);
@@ -547,22 +585,5 @@ struct FrameworkContext {
     , &imageIndex
     );
     return imageIndex;
-  }
-
-  uint FindMemoryType(uint typeFilter, VkMemoryPropertyFlags properties) {
-    VkPhysicalDeviceMemoryProperties memoryProperties;
-    vkGetPhysicalDeviceMemoryProperties(this.physicalDevice, &memoryProperties);
-
-    foreach (i; 0 .. memoryProperties.memoryTypeCount) {
-      if ((typeFilter & (1 << i))
-       && (memoryProperties.memoryTypes[i].propertyFlags & properties)
-       == properties
-      ) {
-        return i;
-      }
-    }
-
-    EnforceAssert(false, "Failed to find a memory type");
-    assert(false);
   }
 };

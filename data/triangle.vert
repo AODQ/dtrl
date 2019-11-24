@@ -1,11 +1,16 @@
 #version 460 core
+#extension GL_ARB_separate_shader_objects : enable
 
-vec2 positions[3] = vec2[](
-  vec2( 0.0f, -0.5f),
-  vec2( 0.5f,  0.5f),
-  vec2(-0.5f,  0.5f)
-);
+layout(location = 0) in vec4 inOrigin;
+layout(location = 1) in vec3 inUvCoord;
+
+layout(location = 0) out vec3 outUvCoord;
+
+out gl_PerVertex {
+  vec4 gl_Position;
+};
 
 void main() {
-  gl_Position = vec4(positions[gl_VertexIndex], 0.0f, 1.0f);
+  gl_Position = inOrigin;
+  outUvCoord = inUvCoord;
 }

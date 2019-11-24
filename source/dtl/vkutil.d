@@ -91,3 +91,25 @@ struct ShaderInfo {
   string filename;
   VkShaderStageFlag stage;
 }
+
+
+uint FindMemoryType(
+  VkPhysicalDevice physicalDevice
+, uint typeFilter
+, VkMemoryPropertyFlags properties
+) {
+  VkPhysicalDeviceMemoryProperties memoryProperties;
+  vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
+
+  foreach (i; 0 .. memoryProperties.memoryTypeCount) {
+    if ((typeFilter & (1 << i))
+     && (memoryProperties.memoryTypes[i].propertyFlags & properties)
+     == properties
+    ) {
+      return i;
+    }
+  }
+
+  neobc.EnforceAssert(false, "Failed to find a memory type");
+  assert(false);
+}

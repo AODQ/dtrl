@@ -1,14 +1,16 @@
 import core.stdc.stdio;
 
-import imgui;
+import core.stdc.stdlib, core.stdc.string;
+import dtl.imgui_widgets;
+import dtl.vkutil;
 import dtoavkbindings.glfw : glfwGetTime;
 import dtoavkbindings.vk;
-import core.stdc.stdlib, core.stdc.string;
+import imgui;
+import neobc.vector;
+
+static import dtl;
 static import neobc;
 static import signalhandler;
-static import dtl;
-import dtl.vkutil;
-import dtl.imgui_widgets;
 
 ////////////////////////////////////////////////////////////////////////////////
 struct RenderPass
@@ -115,7 +117,7 @@ GraphicsPipeline CreateGraphicsPipeline(
   graphicsPipeline.device = frameworkContext.device;
 
   import neobc.file;
-  auto shaderInfos = neobc.Array!(dtl.ShaderInfo)(
+  auto shaderInfos = neobc.Array!(dtl.ShaderInfo).Create(
     dtl.ShaderInfo("data/triangle.vert.spv", VkShaderStageFlag.vertexBit)
   , dtl.ShaderInfo("data/triangle.frag.spv", VkShaderStageFlag.fragmentBit)
   );
@@ -149,13 +151,52 @@ GraphicsPipeline CreateGraphicsPipeline(
     shaderStageInfos ~= shaderStageInfo;
   }
 
+  // creating triangle geometry ------------------------------------------------
+  neobc.Array!VkVertexInputBindingDescription bindingDescriptions;
+  {
+    VkVertexInputBindingDescription bindingDescriptionOrigin = {
+      binding: 0
+    , stride: float.sizeof * 4
+    , inputRate: VkVertexInputRate.vertex
+    };
+
+    VkVertexInputBindingDescription bindingDescriptionUvCoord = {
+      binding: 1
+    , stride: float.sizeof * 3
+    , inputRate: VkVertexInputRate.vertex
+    };
+
+    bindingDescriptions ~= bindingDescriptionOrigin;
+    bindingDescriptions ~= bindingDescriptionUvCoord;
+  }
+
+  neobc.Array!VkVertexInputAttributeDescription attributeDescriptions;
+  {
+    VkVertexInputAttributeDescription attributeDescriptionOrigin = {
+      location: 0
+    , binding: 0
+    , format: VkFormat.r32g32b32a32Sfloat
+    , offset: 0
+    };
+
+    VkVertexInputAttributeDescription attributeDescriptionUvCoord = {
+      location: 1
+    , binding: 1
+    , format: VkFormat.r32g32b32Sfloat
+    , offset: 0
+    };
+
+    attributeDescriptions ~= attributeDescriptionOrigin;
+    attributeDescriptions ~= attributeDescriptionUvCoord;
+  }
+
   // -- create pipeline vertex input state
   VkPipelineVertexInputStateCreateInfo vertexInputState = {
     sType: VkStructureType.pipelineVertexInputStateCreateInfo
-  , vertexBindingDescriptionCount: 0
-  , pVertexBindingDescriptions: null
-  , vertexAttributeDescriptionCount: 0
-  , pVertexAttributeDescriptions: null
+  , vertexBindingDescriptionCount: cast(int)bindingDescriptions.length
+  , pVertexBindingDescriptions: bindingDescriptions.ptr
+  , vertexAttributeDescriptionCount: cast(int)attributeDescriptions.length
+  , pVertexAttributeDescriptions: attributeDescriptions.ptr
   };
 
   VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = {
@@ -385,11 +426,85 @@ void main(string[] args) {
     );
   }
 
-
   // renderpass start ----------------------------------------------------------
   printf("Creating %lu command buffers\n", commandBuffers.length);
-  foreach (it; 0 .. commandBuffers.length) {
 
+  auto origins = neobc.Array!float4(4);
+  origins[0] = float4(+0.0f, +0.0f, 0.0f, 1.0f);
+  origins[1] = float4(+0.0f, +1.0f, 0.0f, 1.0f);
+  origins[2] = float4(+1.0f, +1.0f, 0.0f, 1.0f);
+  origins[3] = float4(+1.0f, +0.0f, 0.0f, 1.0f);
+
+  auto uvCoords = neobc.Array!float3(4);
+  uvCoords[0] = float3( 1.0f,  0.0f, 0.0f);
+  uvCoords[1] = float3( 0.0f,  1.0f, 0.0f);
+  uvCoords[2] = float3( 0.0f,  0.0f, 1.0f);
+  uvCoords[4] = float3( 1.0f,  1.0f, 1.0f);
+
+  neobc.Array!uint indices;
+  indices ~= 0;
+  indices ~= 1;
+  indices ~= 2;
+  indices ~= 2;
+  indices ~= 3;
+  indices ~= 0;
+
+  dtl.Buffer vertexBuffer;
+  {
+    auto vertexStagingBuffer =
+      dtl.Buffer.Construct(
+        frameworkContext
+      , 4 * float.sizeof * (4+3)
+      , VkBufferUsageFlag.vertexBufferBit | VkBufferUsageFlag.transferSrcBit
+      , VkMemoryPropertyFlag.hostVisibleBit
+      | VkMemoryPropertyFlag.hostCoherentBit
+      );
+
+    {
+      dtl.MappedBuffer mappedBuffer = vertexStagingBuffer.MapBufferRange();
+      memcpy(mappedBuffer.data, origins.ptr, origins.byteLength);
+      memcpy(
+        mappedBuffer.data + origins.byteLength
+      , uvCoords.ptr
+      , uvCoords.byteLength
+      );
+    }
+
+    vertexBuffer =
+      dtl.Buffer.Construct(
+        frameworkContext
+      , vertexStagingBuffer
+      , VkBufferUsageFlag.vertexBufferBit | VkBufferUsageFlag.transferDstBit
+      , VkMemoryPropertyFlag.deviceLocalBit
+      );
+  }
+
+  dtl.Buffer indexBuffer;
+  {
+    auto vertexStagingBuffer =
+      dtl.Buffer.Construct(
+        frameworkContext
+      , 4 * uint.sizeof
+      , VkBufferUsageFlag.indexBufferBit | VkBufferUsageFlag.transferSrcBit
+      , VkMemoryPropertyFlag.hostVisibleBit
+      | VkMemoryPropertyFlag.hostCoherentBit
+      );
+
+    {
+      dtl.MappedBuffer mappedBuffer = vertexStagingBuffer.MapBufferRange();
+      memcpy(mappedBuffer.data, indices.ptr, indices.byteLength);
+    }
+
+    vertexBuffer =
+      dtl.Buffer.Construct(
+        frameworkContext
+      , vertexStagingBuffer
+      , VkBufferUsageFlag.indexBufferBit | VkBufferUsageFlag.transferDstBit
+      , VkMemoryPropertyFlag.deviceLocalBit
+      );
+  }
+
+  foreach (it; 0 .. commandBuffers.length) {
     VkCommandBufferBeginInfo beginInfo = {
       sType: VkStructureType.commandBufferBeginInfo
     , flags: 0
@@ -425,7 +540,30 @@ void main(string[] args) {
     , pipeline.pipeline
     );
 
-    vkCmdDraw(commandBuffers[it], 3, 1, 0, 0);
+    neobc.Array!VkBuffer buffers;
+    buffers ~= vertexBuffer.handle;
+    buffers ~= vertexBuffer.handle;
+    neobc.Array!VkDeviceSize offsets;
+    offsets ~= 0;
+    offsets ~= origins.byteLength; // offset to origin
+
+    vkCmdBindVertexBuffers(
+      commandBuffers[it]
+    , 0
+    , cast(uint)buffers.length, buffers.ptr, offsets.ptr
+    );
+
+    vkCmdBindIndexBuffer(
+      commandBuffers[it]
+    , indexBuffer.handle
+    , 0
+    , VkIndexType.uint32
+    );
+
+    vkCmdDrawIndexed(
+      commandBuffers[it]
+    , cast(uint)indices.length, 1, 0, 0, 0
+    );
 
     vkCmdEndRenderPass(commandBuffers[it]);
 
@@ -496,7 +634,7 @@ void main(string[] args) {
 
   VkDescriptorPool descriptorPool;
   { // -- create descriptor pool
-    auto poolSizes = neobc.Array!VkDescriptorPoolSize(
+    auto poolSizes = neobc.Array!VkDescriptorPoolSize.Create(
       VkDescriptorPoolSize(VkDescriptorType.sampler, 1000)
     , VkDescriptorPoolSize(VkDescriptorType.combinedImageSampler, 1000)
     , VkDescriptorPoolSize(VkDescriptorType.sampledImage, 1000)
@@ -747,11 +885,11 @@ void main(string[] args) {
 
   vkDeviceWaitIdle(frameworkContext.device);
 
-
   ImGui_ImplVulkan_Shutdown();
   ImGui_ImplGlfw_Shutdown();
   igDestroyContext(igGetCurrentContext());
-  // vkFreeMemory(frameworkContext.device, resolvedImageMemory, null);
 
   printf("-- Closing --\n");
+
+  vertexBuffer.Free;
 }

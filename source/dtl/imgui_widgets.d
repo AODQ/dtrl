@@ -29,6 +29,14 @@ void igWidgetShowFramerateGraph(float delta)
   }
   avg /= cast(float)storedDelta.length;
 
+  igPlotLines(
+    "\0"
+  , storedDelta.ptr, cast(int)storedDelta.length
+  , 0, "\0"
+  , 0.0f, 11.111f
+  , ImVec2(640, 50), 4
+  );
+
   igText(
     "%.3f ms, %d FPS || avg %.3f ms, %d FPS",
     delta, cast(int)(1000.0f / delta),
@@ -36,14 +44,6 @@ void igWidgetShowFramerateGraph(float delta)
   );
 
   igCheckbox("pause graph", &pauseGraph);
-
-  igPlotLines(
-    "\0"
-  , storedDelta.ptr, cast(int)storedDelta.length
-  , 0, "\0"
-  , 0.0f, 11.111f
-  , ImVec2(640, 200), 4
-  );
 
   foreach (i; storedDelta.AsRange) {
     if (i > 11.111f) {
