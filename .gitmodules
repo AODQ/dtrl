@@ -1,0 +1,6 @@
+[submodule "dependencies/dtoavk-bindings"]
+	path = dependencies/dtoavk-bindings
+	url = https://github.com/aodq/dtoavk-bindings
+[submodule "dependencies/neobc"]
+	path = dependencies/neobc
+	url = https://github.com/aodq/neobc
