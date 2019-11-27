@@ -24,8 +24,8 @@ preRunCommands "echo hi"
 preRunCommands "echo hi"
 
 dependency "bindbc-glfw" version="~>0.2.0"
-dependency "dtoavk-bindings" version=">=0.0.0"
-dependency "neobc" version=">=0.0.0"
+dependency "dtoavk-bindings" path="dependencies/dtoavk-bindings"
+dependency "neobc" path="dependencies/neobc"
 versions "BindGLFW_Static" "GLFW_32"
 
 subConfiguration "bindbc-glfw" "staticBC"
