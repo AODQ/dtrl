@@ -30,6 +30,6 @@ versions "BindGLFW_Static" "GLFW_32"
 
 subConfiguration "bindbc-glfw" "staticBC"
 
-libs "glfw" "vulkan" "cimgui" "cgltf" "png"
+libs "glfw" "vulkan" "cimgui"
 
 dflags "-betterC"
