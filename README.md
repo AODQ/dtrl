@@ -14,17 +14,17 @@ built/installed by hand from https://github.com/cimgui/cimgui .
 ei
 
 \# build cimgui
-git clone https://github.com/cimgui/cimgui
-pushd cimgui
-mkdir build
-cd build
-cmake -DCMAKE\_BUILD\_TYPE=RelWithDebInfo ..
-make -j3
-sudo cp cimgui.so /usr/lib/cimgui.so
-popd
+    git clone https://github.com/cimgui/cimgui
+    pushd cimgui
+    mkdir build
+    cd build
+    cmake -DCMAKE\_BUILD\_TYPE=RelWithDebInfo ..
+    make -j3
+    sudo cp cimgui.so /usr/lib/cimgui.so
+    popd
 
 \# build & runs dtrl
-git clone https://github.com/aodq/dtrl
-cd dtrl
-git submodule update --init --recursive
-dub
+    git clone https://github.com/aodq/dtrl
+    cd dtrl
+    git submodule update --init --recursive
+    dub
