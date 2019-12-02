@@ -16,7 +16,7 @@ void igWidgetShowFramerateGraph(float delta)
   if (!pauseGraph && storedCountdown < 0.0f)
   {
     storedCountdown = 11.111f;
-    for (size_t i = storedDelta.length-1; i != -1; -- i)
+    for (size_t i = storedDelta.length-1; i != 0; -- i)
       storedDelta[i] = storedDelta[i-1];
     storedDelta[0] = delta;
   }
