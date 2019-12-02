@@ -549,12 +549,12 @@ struct FrameworkContext {
       imageView = null;
     }
 
-    vkDestroyCommandPool(this.device, this.transientCommandPool, null);
     vkFreeCommandBuffers(
       this.device
     , this.transientCommandPool
     , 1, &this.transientCommandBuffer
     );
+    vkDestroyCommandPool(this.device, this.transientCommandPool, null);
     vkDestroySemaphore(this.device, this.semaphoreImageAcquired, null);
     vkDestroySemaphore(this.device, this.semaphoreRendersFinished, null);
     vkDestroySwapchainKHR(this.device, this.swapchain, null);
