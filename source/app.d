@@ -441,13 +441,13 @@ void main(string[] args) {
   uvCoords[2] = float3( 0.0f,  0.0f, 1.0f);
   uvCoords[3] = float3( 1.0f,  1.0f, 1.0f);
 
-  neobc.Array!uint indices;
-  indices ~= 0;
-  indices ~= 1;
-  indices ~= 2;
-  indices ~= 2;
-  indices ~= 3;
-  indices ~= 0;
+  auto indices = neobc.Array!uint(6);
+  indices[0] = 0;
+  indices[1] = 1;
+  indices[2] = 2;
+  indices[3] = 2;
+  indices[4] = 3;
+  indices[5] = 0;
 
   dtl.Buffer vertexBuffer;
   {
@@ -477,31 +477,38 @@ void main(string[] args) {
       , VkBufferUsageFlag.vertexBufferBit | VkBufferUsageFlag.transferDstBit
       , VkMemoryPropertyFlag.deviceLocalBit
       );
+
+    vertexStagingBuffer.Free;
   }
 
   dtl.Buffer indexBuffer;
   {
-    auto vertexStagingBuffer =
+    auto indexStagingBuffer =
       dtl.Buffer.Construct(
         frameworkContext
-      , 4 * uint.sizeof
+      , 6 * uint.sizeof
       , VkBufferUsageFlag.indexBufferBit | VkBufferUsageFlag.transferSrcBit
       , VkMemoryPropertyFlag.hostVisibleBit
       | VkMemoryPropertyFlag.hostCoherentBit
       );
 
     {
-      dtl.MappedBuffer mappedBuffer = vertexStagingBuffer.MapBufferRange();
+      dtl.MappedBuffer mappedBuffer = indexStagingBuffer.MapBufferRange();
       memcpy(mappedBuffer.data, indices.ptr, indices.byteLength);
     }
 
-    vertexBuffer =
+    indexBuffer =
       dtl.Buffer.Construct(
         frameworkContext
-      , vertexStagingBuffer
+      , indexStagingBuffer
       , VkBufferUsageFlag.indexBufferBit | VkBufferUsageFlag.transferDstBit
       , VkMemoryPropertyFlag.deviceLocalBit
       );
+
+    indexStagingBuffer.Free;
+  }
+  scope(exit) {
+    indexBuffer.Free;
   }
 
   foreach (it; 0 .. commandBuffers.length) {
@@ -673,60 +680,6 @@ void main(string[] args) {
   , imguiCommandBuffers[0]
   , descriptorPool
   );
-
-////////////////////////////////////////////////////////////////////////////////
-
-
-  // VkImage resolvedImage;
-  // VkDeviceMemory resolvedImageMemory;
-  // {
-  //   VkImageCreateInfo imageInfo = {
-  //     sType: VkStructureType.imageCreateInfo
-  //   , format: VkFormat.r8g8b8a8Unorm
-  //   , tiling: VkImageTiling.optimal
-  //   , imageType: VkImageType.i2D
-  //   , extent: { 800, 600, 1 }
-  //   , mipLevels: 1
-  //   , arrayLayers: 1
-  //   , initialLayout: VkImageLayout.undefined
-  //   , usage: VkImageUsageFlag.transferDstBit | VkImageUsageFlag.sampledBit
-  //   , sharingMode: VkSharingMode.exclusive
-  //   , samples: VkSampleCountFlag.i1Bit
-  //   , flags: 0
-  //   };
-
-  //   vkCreateImage(
-  //     frameworkContext.device
-  //   , &imageInfo
-  //   , null
-  //   , &resolvedImage
-  //   ).EnforceVk;
-  //   scope (exit) vkDestroyImage(frameworkContext.device, resolvedImage, null);
-
-  //   VkMemoryRequirements memoryRequirements;
-  //   vkGetImageMemoryRequirements(
-  //     frameworkContext.device
-  //   , resolvedImage
-  //   , &memoryRequirements
-  //   );
-
-  //   VkMemoryAllocateInfo memoryAllocateInfo = {
-  //     sType: VkStructureType.memoryAllocateInfo
-  //   , allocationSize: memoryRequirements.size
-  //   , memoryTypeIndex:
-  //       frameworkContext.FindMemoryType(
-  //         memoryRequirements.memoryTypeBits
-  //       , VkMemoryPropertyFlag.deviceLocalBit
-  //       )
-  //   };
-
-  //   vkAllocateMemory(
-  //     frameworkContext.device
-  //   , &memoryAllocateInfo
-  //   , null
-  //   , &resolvedImageMemory
-  //   );
-  // }
 
   VkSemaphore semaphoreMainRenderFinished;
   {
