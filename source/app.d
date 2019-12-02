@@ -439,7 +439,7 @@ void main(string[] args) {
   uvCoords[0] = float3( 1.0f,  0.0f, 0.0f);
   uvCoords[1] = float3( 0.0f,  1.0f, 0.0f);
   uvCoords[2] = float3( 0.0f,  0.0f, 1.0f);
-  uvCoords[4] = float3( 1.0f,  1.0f, 1.0f);
+  uvCoords[3] = float3( 1.0f,  1.0f, 1.0f);
 
   neobc.Array!uint indices;
   indices ~= 0;
